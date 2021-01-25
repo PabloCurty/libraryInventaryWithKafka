@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.protocol.types.Field;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -27,8 +31,10 @@ public class LibraryEventProducer {
     @Autowired
     ObjectMapper objectMapper;
 
+    //Topic can be defined in application.yml, but we have a buildProducer method with topic in the signature
     String topic = "library-events";
 
+    //Send a message in synchronous way using
     public SendResult<Integer, String> sendLibraryEventSynchronous(LibraryEvent libraryEvent) throws JsonProcessingException, ExecutionException, InterruptedException, TimeoutException {
         Integer key = libraryEvent.getLibraryEventId();
         String value = objectMapper.writeValueAsString(libraryEvent);
@@ -45,6 +51,9 @@ public class LibraryEventProducer {
         return sendResult;
     }
 
+    //Send a message in Asynchronous way with de "send default" method and capturing with the Listenable Future object
+    // The "send default" method pass just a key and value
+    //Send only key and value. Handle with failure or success
     public void sendLibraryEvent(LibraryEvent libraryEvent) throws JsonProcessingException {
 
         Integer key = libraryEvent.getLibraryEventId();
@@ -63,6 +72,11 @@ public class LibraryEventProducer {
         });
     }
 
+    //Send a message in Asynchronous way with de "send" method and capturing with the Listenable Future object
+    // The "send" method pass topic, partition, key, value and headers in optional way,
+    // and we can pass an object from "Producer Record" class, I was able to study this two ways of this signature
+    // is this case we only passed key, value, topic and header.
+    //Using a ProducerRecord object to send topic, partition, key, value and header
     public void sendLibraryEvent_Approach2(LibraryEvent libraryEvent) throws JsonProcessingException {
 
         Integer key = libraryEvent.getLibraryEventId();
@@ -84,10 +98,13 @@ public class LibraryEventProducer {
         });
     }
 
+    //Build a producer record to send like an object
     private ProducerRecord<Integer, String> buildProducerRecord(Integer key, String value, String topic) {
-        return new ProducerRecord<>(topic, null, key, value, null);
+        List<Header> recordHeaders = List.of(new RecordHeader("event-source", "scanner".getBytes()));
+        return new ProducerRecord<>(topic, null, key, value, recordHeaders);
     }
 
+    //Error handle
     private void handleFailure(Integer key, String value, Throwable ex) {
         log.error("Error sending the message anda the exception is {}", ex.getMessage());
         try {
@@ -97,6 +114,7 @@ public class LibraryEventProducer {
         }
     }
 
+    //Success handle
     private void handleSuccess(Integer key, String value, SendResult<Integer, String> result) {
         log.info("Message send successfully for the key: {} and the value is {}, partition is {}"
                 , key, value, result.getRecordMetadata().partition());
