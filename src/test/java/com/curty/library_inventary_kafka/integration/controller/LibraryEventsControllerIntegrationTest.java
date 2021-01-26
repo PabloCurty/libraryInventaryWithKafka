@@ -81,7 +81,13 @@ public class LibraryEventsControllerIntegrationTest {
         ResponseEntity<LibraryEvent> responseEntity = restTemplate
                 .exchange("/v1/libraryevent", HttpMethod.POST, request, LibraryEvent.class);
         ConsumerRecord<Integer, String> consumerRecord = KafkaTestUtils.getSingleRecord(consumer, "library-events");
-        Thread.sleep(3000);
+
+        /*Kafka Embedded for test in Java is delay so much to up, and the application giver a time over sometimes.
+          How to solve this?
+          I put a Thread sleep for now, but I'm looking for a better way.
+        */
+        Thread.sleep(5000);
+
         String value = consumerRecord.value();
 
         //verification
