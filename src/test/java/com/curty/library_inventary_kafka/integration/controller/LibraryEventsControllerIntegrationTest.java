@@ -7,12 +7,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 //If you not provide the port, all the time we will launch the application in default port 88
 //It's can make a conflict, happened with me
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@EmbeddedKafka(topics = {"library-events"}, partitions = 3)
+//Set the bootstrap servers configuration in this embedded kafka catch what is in application.yml
+//The value to set is in the EmbeddedKafkaBroker class, is the Static variable SPRING_EMBEDDED_KAFKA_BROKERS
+@TestPropertySource(properties = {
+        "spring.kafka.producer.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "spring.kafka.admin.properties.bootstrap-servers=${spring.embedded.kafka.brokers}"})
 public class LibraryEventsControllerIntegrationTest {
 
     @Autowired
@@ -33,7 +41,7 @@ public class LibraryEventsControllerIntegrationTest {
                 .build();
         //We need to pass in restTemplate.exchange a LibraryEvent in a HttpEntity and HttpHeaders way
         HttpHeaders headers = new HttpHeaders();
-        headers.set("contet-type", MediaType.APPLICATION_JSON.toString());
+        headers.set("content-type", MediaType.APPLICATION_JSON.toString());
         HttpEntity<LibraryEvent> request = new HttpEntity<>(libraryEvent, headers);
 
         //execution
