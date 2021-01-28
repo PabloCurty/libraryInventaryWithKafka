@@ -58,7 +58,7 @@ public class LibraryEventsControllerIntegrationTest {
     }
 
     @Test
-    void postLibraryEventTest() throws InterruptedException {
+    void postLibraryEventIntegrationTest() throws InterruptedException {
 
         //scenario
         Book book = Book.builder()
